@@ -1,0 +1,886 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from 'react';
+import { motion, AnimatePresence, Variants } from 'motion/react';
+import { 
+  Sparkles, 
+  Calendar, 
+  Loader2, 
+  Heart, 
+  AlertCircle,
+  Clock,
+  Zap,
+  ArrowLeft,
+  Flower2,
+  Moon,
+  Sun,
+  Coffee,
+  LogOut,
+  User as UserIcon,
+  Lock,
+  Eye,
+  EyeOff,
+  CheckCircle2
+} from 'lucide-react';
+import Markdown from 'react-markdown';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { processBrainDump, generateTodayPlan } from './services/gemini';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+type Step = 'auth' | 'home' | 'dump' | 'process' | 'plan' | 'execute';
+type AuthMode = 'login' | 'signup';
+
+interface ChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      staggerChildren: 0.05,
+      staggerDirection: -1
+    }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 24
+    }
+  },
+  exit: { y: -20, opacity: 0 }
+};
+
+export default function App() {
+  const [step, setStep] = useState<Step>('auth');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const [user, setUser] = useState<{ username: string } | null>(null);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [rawText, setRawText] = useState('');
+  const [processedTasks, setProcessedTasks] = useState('');
+  const [todayPlan, setTodayPlan] = useState('');
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Plan inputs
+  const [availableTime, setAvailableTime] = useState('4 hours');
+  const [energyLevel, setEnergyLevel] = useState<'Low' | 'Medium' | 'High'>('Medium');
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('17:00');
+
+  const toggleAmPm = (time: string, setter: (val: string) => void) => {
+    let [hours, minutes] = time.split(':').map(Number);
+    hours = (hours + 12) % 24;
+    setter(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+  };
+
+  const getAmPm = (time: string) => {
+    const hours = parseInt(time.split(':')[0]);
+    return hours >= 12 ? 'PM' : 'AM';
+  };
+
+  React.useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+        setStep('home');
+      }
+    } catch (err) {
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUser(data.user);
+        setStep('home');
+      } else {
+        setError(data.error || 'Authentication failed');
+      }
+    } catch (err) {
+      setError('Connection error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setUser(null);
+      setStep('auth');
+      setUsername('');
+      setPassword('');
+    } catch (err) {
+      console.error('Logout failed', err);
+    }
+  };
+
+  const handleProcessDump = async () => {
+    if (!rawText.trim()) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await processBrainDump(rawText);
+      setProcessedTasks(result || '');
+      setStep('process');
+    } catch (err) {
+      setError('Something went wrong. Let\'s try again, darling.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGeneratePlan = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const workHours = `${startTime} - ${endTime}`;
+      const result = await generateTodayPlan(processedTasks, availableTime, energyLevel, workHours);
+      setTodayPlan(result || '');
+      
+      // Parse tasks for checklist
+      if (result) {
+        const lines = result.split('\n');
+        const items: ChecklistItem[] = [];
+        lines.forEach((line, index) => {
+          const trimmed = line.trim();
+          if (trimmed && (trimmed.includes('→') || trimmed.includes('-'))) {
+            items.push({
+              id: `task-${index}`,
+              text: trimmed,
+              completed: false
+            });
+          }
+        });
+        setChecklist(items);
+      }
+      
+      setStep('plan');
+    } catch (err) {
+      setError('Failed to create your dream schedule. Try once more.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const reset = () => {
+    setStep('dump');
+    setRawText('');
+    setProcessedTasks('');
+    setTodayPlan('');
+    setChecklist([]);
+    setError(null);
+  };
+
+  const toggleTask = (id: string) => {
+    setChecklist(prev => prev.map(item => 
+      item.id === id ? { ...item, completed: !item.completed } : item
+    ));
+  };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-aesthetic-bg">
+        <Loader2 className="w-8 h-8 animate-spin text-aesthetic-lavender-deep" />
+      </div>
+    );
+  }
+
+  if (!user || step === 'auth') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-aesthetic-bg selection:bg-aesthetic-lavender selection:text-aesthetic-lavender-deep relative overflow-hidden">
+        {/* Decorative Background Patterns */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+          <motion.div 
+            animate={{ scale: [1, 1.1, 1], rotate: [0, 5, 0] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-24 -left-24 w-96 h-96 bg-aesthetic-lavender/20 rounded-full blur-3xl" 
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.2, 1], rotate: [0, -10, 0] }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-aesthetic-accent/10 rounded-full blur-3xl" 
+          />
+        </div>
+
+        <main className="w-full max-w-md relative z-10">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            <motion.div variants={itemVariants} className="space-y-3 text-center">
+              <div className="w-16 h-16 bg-white border border-aesthetic-lavender rounded-3xl flex items-center justify-center shadow-sm mx-auto mb-6">
+                <Sparkles className="text-aesthetic-lavender-deep w-8 h-8" />
+              </div>
+              <h1 className="text-4xl font-display italic text-aesthetic-ink tracking-tight">ClearDay</h1>
+              <p className="text-aesthetic-ink/60 text-sm font-light tracking-wide">
+                {authMode === 'login' ? 'Welcome back to your rituals.' : 'Begin your mindful journey today.'}
+              </p>
+            </motion.div>
+
+            <motion.form 
+              variants={itemVariants}
+              onSubmit={handleAuth} 
+              className="bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm p-8 space-y-6"
+            >
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                    <UserIcon className="w-3 h-3" /> Username
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full p-4 bg-aesthetic-bg/50 border border-aesthetic-lavender rounded-2xl focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 transition-all"
+                    placeholder="Enter your username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                    <Lock className="w-3 h-3" /> Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full p-4 bg-aesthetic-bg/50 border border-aesthetic-lavender rounded-2xl focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 transition-all pr-12"
+                      placeholder="Enter your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-aesthetic-ink/30 hover:text-aesthetic-lavender-deep transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <motion.button
+                type="submit"
+                disabled={isLoading}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-5 bg-aesthetic-lavender-deep text-white rounded-full font-medium flex items-center justify-center gap-3 hover:bg-aesthetic-lavender-deep/90 transition-all shadow-lg shadow-aesthetic-lavender-deep/20 disabled:opacity-50"
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                {authMode === 'login' ? 'Sign In' : 'Create Account'}
+              </motion.button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                  className="text-xs text-aesthetic-ink/40 hover:text-aesthetic-lavender-deep transition-colors font-medium"
+                >
+                  {authMode === 'login' ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                </button>
+              </div>
+            </motion.form>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-red-50/50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-xs italic font-serif"
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </motion.div>
+            )}
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  const navItems = [
+    { id: 'home', label: 'Overview', icon: Heart },
+    { id: 'dump', label: 'Mindful Release', icon: Flower2 },
+    { id: 'process', label: 'Journey Structure', icon: Sparkles },
+    { id: 'plan', label: 'Daily Ritual', icon: Calendar },
+    { id: 'execute', label: 'Execution Mode', icon: CheckCircle2 },
+  ];
+
+  return (
+    <div className="min-h-screen flex bg-aesthetic-bg selection:bg-aesthetic-lavender selection:text-aesthetic-lavender-deep relative overflow-hidden">
+      {/* Sidebar */}
+      <aside 
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-aesthetic-lavender transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          !isSidebarOpen && "-translate-x-full"
+        )}
+      >
+        <div className="h-full flex flex-col p-8">
+          <div className="flex items-center gap-3 mb-12">
+            <div className="w-8 h-8 bg-aesthetic-lavender/30 border border-aesthetic-lavender rounded-xl flex items-center justify-center shadow-sm">
+              <Sparkles className="text-aesthetic-lavender-deep w-4 h-4" />
+            </div>
+            <h1 className="text-xl font-display italic text-aesthetic-ink tracking-tight">ClearDay</h1>
+          </div>
+
+          <nav className="flex-1 space-y-2">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setStep(item.id as Step)}
+                className={cn(
+                  "w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all text-left font-serif italic text-lg",
+                  step === item.id 
+                    ? "bg-aesthetic-lavender/20 text-aesthetic-lavender-deep shadow-sm" 
+                    : "text-aesthetic-ink/40 hover:bg-aesthetic-bg hover:text-aesthetic-ink/60"
+                )}
+              >
+                <item.icon className={cn("w-5 h-5", step === item.id ? "text-aesthetic-lavender-deep" : "text-aesthetic-ink/30")} />
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="mt-auto pt-8 border-t border-aesthetic-lavender space-y-4">
+            <div className="flex items-center gap-3 px-4">
+              <div className="w-10 h-10 bg-aesthetic-accent/10 rounded-full flex items-center justify-center">
+                <UserIcon className="w-5 h-5 text-aesthetic-lavender-deep" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-aesthetic-ink truncate">{user.username}</p>
+                <p className="text-[10px] text-aesthetic-ink/40 uppercase tracking-widest font-bold">Free Plan</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-aesthetic-ink/40 hover:bg-red-50 hover:text-red-500 transition-all font-serif italic text-lg"
+            >
+              <LogOut className="w-5 h-5" />
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        {/* Decorative Background Patterns */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+          <motion.div 
+            animate={{ scale: [1, 1.1, 1], rotate: [0, 5, 0] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-24 -left-24 w-96 h-96 bg-aesthetic-lavender/20 rounded-full blur-3xl opacity-50" 
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.2, 1], rotate: [0, -10, 0] }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-aesthetic-accent/10 rounded-full blur-3xl opacity-50" 
+          />
+        </div>
+
+        <header className="h-20 flex items-center justify-between px-8 relative z-10 lg:hidden">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 text-aesthetic-ink/40 hover:text-aesthetic-lavender-deep transition-colors"
+          >
+            <Sparkles className="w-6 h-6" />
+          </button>
+          <h1 className="text-xl font-display italic text-aesthetic-ink">ClearDay</h1>
+          <div className="w-10" />
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-8 lg:p-12 relative z-10">
+          <div className="max-w-4xl mx-auto">
+            <AnimatePresence mode="wait">
+              {step === 'home' && (
+                <motion.div
+                  key="home"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-10"
+                >
+                  <motion.div variants={itemVariants} className="space-y-3">
+                    <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Welcome, {user.username}</h2>
+                    <p className="text-aesthetic-ink/60 text-lg font-light tracking-wide">
+                      Your mindful journey continues. How shall we shape your day?
+                    </p>
+                  </motion.div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <motion.button
+                      variants={itemVariants}
+                      whileHover={{ scale: 1.02, y: -4 }}
+                      onClick={() => setStep('dump')}
+                      className="p-8 bg-white border border-aesthetic-lavender rounded-[2.5rem] text-left space-y-4 hover:shadow-lg hover:shadow-aesthetic-lavender/20 transition-all group"
+                    >
+                      <div className="w-12 h-12 bg-aesthetic-lavender/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Flower2 className="w-6 h-6 text-aesthetic-lavender-deep" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-serif italic text-aesthetic-ink">Mindful Release</h3>
+                        <p className="text-sm text-aesthetic-ink/40">Empty your mind and find clarity.</p>
+                      </div>
+                    </motion.button>
+
+                    <motion.button
+                      variants={itemVariants}
+                      whileHover={{ scale: 1.02, y: -4 }}
+                      onClick={() => setStep('execute')}
+                      className="p-8 bg-white border border-aesthetic-lavender rounded-[2.5rem] text-left space-y-4 hover:shadow-lg hover:shadow-aesthetic-lavender/20 transition-all group"
+                    >
+                      <div className="w-12 h-12 bg-aesthetic-accent/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <CheckCircle2 className="w-6 h-6 text-aesthetic-lavender-deep" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-serif italic text-aesthetic-ink">Execution Mode</h3>
+                        <p className="text-sm text-aesthetic-ink/40">
+                          {checklist.length > 0 
+                            ? `${checklist.filter(c => c.completed).length}/${checklist.length} tasks completed`
+                            : "No active ritual. Start one today."}
+                        </p>
+                      </div>
+                    </motion.button>
+                  </div>
+
+                  {todayPlan && (
+                    <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] p-10 space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="w-5 h-5 text-aesthetic-lavender-deep" />
+                          <h3 className="text-xl font-serif italic text-aesthetic-ink">Current Ritual</h3>
+                        </div>
+                        <button 
+                          onClick={() => setStep('plan')}
+                          className="text-xs font-bold uppercase tracking-widest text-aesthetic-lavender-deep hover:underline"
+                        >
+                          View Full Plan
+                        </button>
+                      </div>
+                      <div className="p-6 bg-aesthetic-bg/50 rounded-3xl border border-aesthetic-lavender/50 italic text-aesthetic-ink/60 line-clamp-3">
+                        {todayPlan}
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+
+              {step === 'dump' && (
+                <motion.div
+                  key="dump"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-8"
+                >
+                  <motion.div variants={itemVariants} className="space-y-3">
+                    <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Mindful Release</h2>
+                    <p className="text-aesthetic-ink/60 text-lg font-light tracking-wide">
+                      Let it all out. Every thought, every task, every dream.
+                    </p>
+                  </motion.div>
+                  <motion.div variants={itemVariants} className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-aesthetic-lavender to-aesthetic-lavender-deep rounded-[2.5rem] blur opacity-20 group-hover:opacity-30 transition duration-1000 group-hover:duration-200"></div>
+                    <textarea
+                      value={rawText}
+                      onChange={(e) => setRawText(e.target.value)}
+                      placeholder="What's on your heart today? List it all here..."
+                      className="relative w-full h-96 p-10 bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 resize-none font-sans text-xl leading-relaxed placeholder:text-aesthetic-ink/30"
+                    />
+                  </motion.div>
+                  <motion.button
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleProcessDump}
+                    disabled={isLoading || !rawText.trim()}
+                    className="w-full py-6 bg-aesthetic-lavender-deep text-white rounded-full font-medium flex items-center justify-center gap-3 hover:bg-aesthetic-lavender-deep/90 transition-all shadow-lg shadow-aesthetic-lavender-deep/20 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                  >
+                    {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Flower2 className="w-6 h-6" />}
+                    Organize My Thoughts
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {step === 'process' && (
+                <motion.div
+                  key="process"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-10"
+                >
+                  <motion.div variants={itemVariants} className="space-y-3">
+                    <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Journey Structure</h2>
+                    <p className="text-aesthetic-ink/60 text-lg font-light">A beautiful structure for your day.</p>
+                  </motion.div>
+
+                  {!processedTasks ? (
+                    <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] p-20 text-center space-y-6">
+                      <div className="w-20 h-20 bg-aesthetic-bg rounded-full flex items-center justify-center mx-auto">
+                        <Flower2 className="w-10 h-10 text-aesthetic-lavender-deep opacity-30" />
+                      </div>
+                      <p className="text-aesthetic-ink/40 font-serif italic text-xl">Start with a Mindful Release to see your journey here.</p>
+                      <button 
+                        onClick={() => setStep('dump')}
+                        className="px-8 py-4 bg-aesthetic-lavender/20 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/40 transition-all"
+                      >
+                        Go to Mindful Release
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <>
+                      <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm p-12 markdown-body font-sans relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                          <Heart className="w-16 h-16 text-aesthetic-lavender-deep" />
+                        </div>
+                        <Markdown>{processedTasks}</Markdown>
+                      </motion.div>
+
+                      <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm p-12 space-y-10">
+                        <div className="flex items-center gap-4">
+                          <Coffee className="w-6 h-6 text-aesthetic-lavender-deep" />
+                          <h3 className="font-serif italic text-2xl text-aesthetic-ink">Set the Vibe</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+                          <div className="space-y-4">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                              <Clock className="w-3 h-3" /> Time for You
+                            </label>
+                            <input
+                              type="text"
+                              value={availableTime}
+                              onChange={(e) => setAvailableTime(e.target.value)}
+                              className="w-full p-5 bg-aesthetic-bg/50 border border-aesthetic-lavender rounded-2xl focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 transition-all"
+                            />
+                          </div>
+                          <div className="space-y-4">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                              <Zap className="w-3 h-3" /> Energy Flow
+                            </label>
+                            <div className="flex gap-2 p-1.5 bg-aesthetic-bg/50 rounded-2xl border border-aesthetic-lavender">
+                              {(['Low', 'Medium', 'High'] as const).map((level) => (
+                                <button
+                                  key={level}
+                                  onClick={() => setEnergyLevel(level)}
+                                  className={cn(
+                                    "flex-1 py-3 text-xs font-medium rounded-xl transition-all",
+                                    energyLevel === level 
+                                      ? "bg-white text-aesthetic-lavender-deep shadow-sm" 
+                                      : "text-aesthetic-ink/40 hover:text-aesthetic-ink/60"
+                                  )}
+                                >
+                                  {level}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                              <Sun className="w-3 h-3" /> Start Time
+                            </label>
+                            <div className="flex gap-3">
+                              <input
+                                type="time"
+                                value={startTime}
+                                onChange={(e) => setStartTime(e.target.value)}
+                                className="flex-1 p-5 bg-aesthetic-bg/50 border border-aesthetic-lavender rounded-2xl focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 transition-all"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => toggleAmPm(startTime, setStartTime)}
+                                className="px-6 bg-aesthetic-lavender/20 border border-aesthetic-lavender rounded-2xl text-[10px] font-bold text-aesthetic-lavender-deep hover:bg-aesthetic-lavender/40 transition-all"
+                              >
+                                {getAmPm(startTime)}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                              <Moon className="w-3 h-3" /> End Time
+                            </label>
+                            <div className="flex gap-3">
+                              <input
+                                type="time"
+                                value={endTime}
+                                onChange={(e) => setEndTime(e.target.value)}
+                                className="flex-1 p-5 bg-aesthetic-bg/50 border border-aesthetic-lavender rounded-2xl focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 transition-all"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => toggleAmPm(endTime, setEndTime)}
+                                className="px-6 bg-aesthetic-lavender/20 border border-aesthetic-lavender rounded-2xl text-[10px] font-bold text-aesthetic-lavender-deep hover:bg-aesthetic-lavender/40 transition-all"
+                              >
+                                {getAmPm(endTime)}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={handleGeneratePlan}
+                          disabled={isLoading}
+                          className="w-full py-6 bg-aesthetic-ink text-white rounded-full font-medium flex items-center justify-center gap-3 hover:bg-aesthetic-ink/90 transition-all shadow-lg disabled:opacity-50 text-lg"
+                        >
+                          {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Calendar className="w-6 h-6" />}
+                          Create My Dream Day
+                        </motion.button>
+                      </motion.div>
+                    </>
+                  )}
+                </motion.div>
+              )}
+
+              {step === 'plan' && (
+                <motion.div
+                  key="plan"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-10"
+                >
+                  <motion.div variants={itemVariants} className="space-y-3">
+                    <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Daily Ritual</h2>
+                    <p className="text-aesthetic-ink/60 text-lg font-light">Gentle reminders for a peaceful day.</p>
+                  </motion.div>
+
+                  {!todayPlan ? (
+                    <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] p-20 text-center space-y-6">
+                      <div className="w-20 h-20 bg-aesthetic-bg rounded-full flex items-center justify-center mx-auto">
+                        <Calendar className="w-10 h-10 text-aesthetic-lavender-deep opacity-30" />
+                      </div>
+                      <p className="text-aesthetic-ink/40 font-serif italic text-xl">Configure your vibe in Journey Structure to see your ritual here.</p>
+                      <button 
+                        onClick={() => setStep('process')}
+                        className="px-8 py-4 bg-aesthetic-lavender/20 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/40 transition-all"
+                      >
+                        Go to Journey Structure
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <>
+                      <motion.div variants={itemVariants} className="relative">
+                        <div className="absolute -left-6 top-0 bottom-0 w-1.5 bg-gradient-to-b from-aesthetic-lavender via-aesthetic-lavender-deep to-aesthetic-lavender rounded-full opacity-50"></div>
+                        <div className="bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm p-12 font-serif italic text-xl leading-loose text-aesthetic-ink/80 whitespace-pre-wrap">
+                          {todayPlan}
+                        </div>
+                      </motion.div>
+
+                      <motion.div variants={itemVariants} className="flex gap-6">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={reset}
+                          className="flex-1 py-6 bg-white border border-aesthetic-lavender text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/20 transition-all text-lg"
+                        >
+                          New Beginning
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setStep('execute')}
+                          className="flex-1 py-6 bg-aesthetic-lavender-deep text-white rounded-full font-medium flex items-center justify-center gap-3 hover:bg-aesthetic-lavender-deep/90 transition-all shadow-lg shadow-aesthetic-lavender-deep/20 text-lg"
+                        >
+                          Start Execution
+                        </motion.button>
+                      </motion.div>
+                    </>
+                  )}
+                </motion.div>
+              )}
+
+              {step === 'execute' && (
+                <motion.div
+                  key="execute"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="space-y-10"
+                >
+                  <motion.div variants={itemVariants} className="space-y-3">
+                    <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Execution Mode</h2>
+                    <p className="text-aesthetic-ink/60 text-lg font-light">Tick off your tasks as you complete them.</p>
+                  </motion.div>
+
+                  {checklist.length > 0 ? (
+                    <>
+                      <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm p-12 space-y-6">
+                        {checklist.map((item) => (
+                          <motion.button
+                            layout
+                            key={item.id}
+                            onClick={() => toggleTask(item.id)}
+                            whileHover={{ scale: 1.01, x: 8 }}
+                            whileTap={{ scale: 0.99 }}
+                            className={cn(
+                              "w-full flex items-start gap-6 p-6 rounded-3xl transition-all text-left group",
+                              item.completed 
+                                ? "bg-aesthetic-lavender/10 opacity-60" 
+                                : "hover:bg-aesthetic-bg"
+                            )}
+                          >
+                            <div className={cn(
+                              "mt-1.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                              item.completed 
+                                ? "bg-aesthetic-lavender-deep border-aesthetic-lavender-deep" 
+                                : "border-aesthetic-lavender group-hover:border-aesthetic-lavender-deep"
+                            )}>
+                              {item.completed && <CheckCircle2 className="w-4 h-4 text-white" />}
+                            </div>
+                            <span className={cn(
+                              "text-xl font-serif italic transition-all",
+                              item.completed ? "line-through text-aesthetic-ink/40" : "text-aesthetic-ink"
+                            )}>
+                              {item.text}
+                            </span>
+                          </motion.button>
+                        ))}
+                      </motion.div>
+
+                      <motion.div variants={itemVariants} className="flex gap-6">
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={reset}
+                          className="flex-1 py-6 bg-white border border-aesthetic-lavender text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/20 transition-all text-lg"
+                        >
+                          New Beginning
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => window.print()}
+                          className="flex-1 py-6 bg-aesthetic-lavender-deep text-white rounded-full font-medium flex items-center justify-center gap-3 hover:bg-aesthetic-lavender-deep/90 transition-all shadow-lg shadow-aesthetic-lavender-deep/20 text-lg"
+                        >
+                          Save Ritual
+                        </motion.button>
+                      </motion.div>
+                    </>
+                  ) : (
+                    <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] p-20 text-center space-y-6">
+                      <div className="w-20 h-20 bg-aesthetic-bg rounded-full flex items-center justify-center mx-auto">
+                        <CheckCircle2 className="w-10 h-10 text-aesthetic-lavender-deep opacity-30" />
+                      </div>
+                      <p className="text-aesthetic-ink/40 font-serif italic text-xl">Create a Daily Ritual first to start executing.</p>
+                      <button 
+                        onClick={() => setStep('plan')}
+                        className="px-8 py-4 bg-aesthetic-lavender/20 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/40 transition-all"
+                      >
+                        Go to Daily Ritual
+                      </button>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-12 p-6 bg-red-50/50 border border-red-100 rounded-[2.5rem] flex items-center gap-6 text-red-600 text-lg italic font-serif"
+              >
+                <AlertCircle className="w-6 h-6 flex-shrink-0" />
+                {error}
+              </motion.div>
+            )}
+          </div>
+        </main>
+
+        <footer className="h-20 flex items-center justify-center gap-8 text-aesthetic-lavender-deep/30 relative z-10">
+          <Moon className="w-4 h-4" />
+          <Sun className="w-4 h-4" />
+          <Coffee className="w-4 h-4" />
+          <p className="text-[10px] text-aesthetic-ink/30 uppercase tracking-[0.4em] font-bold">
+            ClearDay Rituals
+          </p>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function StepIndicator({ currentStep }: { currentStep: Step }) {
+  const steps: Step[] = ['auth', 'dump', 'process', 'plan', 'execute'];
+  const visibleSteps = steps.filter(s => s !== 'auth' || currentStep === 'auth');
+  
+  return (
+    <div className="flex items-center gap-3">
+      {visibleSteps.map((s, i) => (
+        <React.Fragment key={s}>
+          <div 
+            className={cn(
+              "w-2.5 h-2.5 rounded-full transition-all duration-500",
+              currentStep === s 
+                ? "bg-aesthetic-lavender-deep scale-125 shadow-[0_0_10px_rgba(188,168,209,0.5)]" 
+                : "bg-aesthetic-lavender"
+            )} 
+          />
+          {i < visibleSteps.length - 1 && (
+            <div className="w-6 h-[1px] bg-aesthetic-lavender" />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}

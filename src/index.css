@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", serif;
+  --font-display: "Playfair Display", serif;
+  
+  --color-aesthetic-bg: #F8F6FA;
+  --color-aesthetic-lavender: #EAE4F2;
+  --color-aesthetic-lavender-deep: #BCA8D1;
+  --color-aesthetic-ink: #4A405A;
+  --color-aesthetic-accent: #C5D3E8;
+}
+
+body {
+  @apply bg-aesthetic-bg text-aesthetic-ink font-sans antialiased relative;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(234, 228, 242, 0.6) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(197, 211, 232, 0.4) 0%, transparent 40%),
+    radial-gradient(rgba(188, 168, 209, 0.15) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 24px 24px;
+}
+
+body::before {
+  content: "";
+  @apply fixed inset-0 pointer-events-none opacity-[0.03] z-[-1];
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  @apply font-serif italic mt-6 mb-2 text-aesthetic-lavender-deep;
+}
+
+.markdown-body ul {
+  @apply list-none pl-0 mb-4 space-y-2;
+}
+
+.markdown-body li {
+  @apply relative pl-6;
+}
+
+.markdown-body li::before {
+  content: "✧";
+  @apply absolute left-0 text-aesthetic-lavender-deep opacity-60;
+}
+
+.markdown-body p {
+  @apply mb-4 leading-relaxed;
+}
+
+.markdown-body strong {
+  @apply font-semibold text-aesthetic-lavender-deep;
+}
+
+/* Custom scrollbar for aesthetic feel */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-aesthetic-lavender rounded-full;
+}
