@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "Ritual": {
+      "title": "Ritual",
+      "description": "User's daily ritual data including brain dump, processed tasks, and schedule.",
+      "type": "object",
+      "properties": {
+        "rawText": {
+          "type": "string",
+          "description": "The raw brain dump text."
+        },
+        "processedTasks": {
+          "type": "string",
+          "description": "The AI-processed and categorized tasks."
+        },
+        "todayPlan": {
+          "type": "string",
+          "description": "The generated daily schedule."
+        },
+        "checklist": {
+          "type": "array",
+          "description": "List of tasks for execution mode."
+        },
+        "availableTime": {
+          "type": "string",
+          "description": "User's available time for the day."
+        },
+        "energyLevel": {
+          "type": "string",
+          "description": "User's energy level."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Daily start time."
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Daily end time."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp."
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/rituals/{userId}": {
+      "schema": "Ritual",
+      "description": "Collection of user rituals, keyed by user ID."
+    }
+  }
+}

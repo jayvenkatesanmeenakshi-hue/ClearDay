@@ -1,0 +1,67 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: rituals
+// Document ID: {userId} (Firebase Auth UID)
+// Fields:
+//   - rawText: string (optional) - The raw brain dump text.
+//   - processedTasks: string (optional) - The AI-processed and categorized tasks.
+//   - todayPlan: string (optional) - The generated daily schedule.
+//   - checklist: list (optional) - List of tasks for execution mode.
+//   - availableTime: string (optional) - User's available time for the day.
+//   - energyLevel: string (optional) - User's energy level.
+//   - startTime: string (optional) - Daily start time.
+//   - endTime: string (optional) - Daily end time.
+//   - updatedAt: timestamp (optional) - Last update timestamp.
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidRitual(data) {
+      return data.keys().hasOnly([
+        'rawText', 'processedTasks', 'todayPlan', 'checklist', 
+        'availableTime', 'energyLevel', 'startTime', 'endTime', 'updatedAt'
+      ]) &&
+      (!('rawText' in data) || data.rawText is string && data.rawText.size() < 10000) &&
+      (!('processedTasks' in data) || data.processedTasks is string && data.processedTasks.size() < 10000) &&
+      (!('todayPlan' in data) || data.todayPlan is string && data.todayPlan.size() < 10000) &&
+      (!('checklist' in data) || data.checklist is list && data.checklist.size() < 100) &&
+      (!('availableTime' in data) || data.availableTime is string && data.availableTime.size() < 50) &&
+      (!('energyLevel' in data) || data.energyLevel in ['Low', 'Medium', 'High']) &&
+      (!('startTime' in data) || data.startTime is string && data.startTime.matches("^\\d{2}:\\d{2}$")) &&
+      (!('endTime' in data) || data.endTime is string && data.endTime.matches("^\\d{2}:\\d{2}$"));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /rituals/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidRitual(request.resource.data);
+      allow update: if isOwner(userId) && isValidRitual(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

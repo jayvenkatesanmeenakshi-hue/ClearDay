@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Variants } from 'motion/react';
 import { 
   Sparkles, 
@@ -29,6 +29,107 @@ import Markdown from 'react-markdown';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { processBrainDump, generateTodayPlan } from './services/gemini';
+import { auth, db } from './firebase';
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  User
+} from 'firebase/auth';
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, errorInfo: string | null }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorInfo: error.message };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      let displayMessage = "Something went wrong.";
+      try {
+        const parsed = JSON.parse(this.state.errorInfo || "");
+        if (parsed.error) displayMessage = `Database Error: ${parsed.error}`;
+      } catch (e) {
+        displayMessage = this.state.errorInfo || displayMessage;
+      }
+
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-aesthetic-bg p-8">
+          <div className="max-w-md w-full bg-white border border-aesthetic-lavender rounded-[2.5rem] p-10 text-center space-y-6 shadow-xl">
+            <AlertCircle className="w-16 h-16 text-red-400 mx-auto" />
+            <h2 className="text-2xl font-serif italic text-aesthetic-ink">A small ripple in the journey</h2>
+            <p className="text-aesthetic-ink/60 font-light">{displayMessage}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-aesthetic-lavender-deep text-white rounded-full font-medium hover:bg-aesthetic-lavender-deep/90 transition-all"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -75,12 +176,20 @@ const itemVariants: Variants = {
   exit: { y: -20, opacity: 0 }
 };
 
-export default function App() {
+export default function AppWrapper() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
+
+function App() {
   const [step, setStep] = useState<Step>('auth');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
-  const [user, setUser] = useState<{ username: string } | null>(null);
-  const [username, setUsername] = useState('');
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -108,21 +217,66 @@ export default function App() {
     return hours >= 12 ? 'PM' : 'AM';
   };
 
-  React.useEffect(() => {
-    checkAuth();
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        setStep('home');
+      } else {
+        setStep('auth');
+      }
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const checkAuth = async () => {
-    try {
-      const res = await fetch('/api/auth/me');
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-        setStep('home');
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        // Use getDocFromServer to bypass cache and test real connection
+        const { getDocFromServer } = await import('firebase/firestore');
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
       }
+    };
+    testConnection();
+  }, []);
+
+  // Sync with Firestore
+  useEffect(() => {
+    if (!user) return;
+
+    const ritualRef = doc(db, 'rituals', user.uid);
+    const unsubscribe = onSnapshot(ritualRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setRawText(data.rawText || '');
+        setProcessedTasks(data.processedTasks || '');
+        setTodayPlan(data.todayPlan || '');
+        setChecklist(data.checklist || []);
+        setAvailableTime(data.availableTime || '4 hours');
+        setEnergyLevel(data.energyLevel || 'Medium');
+        setStartTime(data.startTime || '09:00');
+        setEndTime(data.endTime || '17:00');
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `rituals/${user.uid}`);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const saveRitual = async (updates: any) => {
+    if (!user) return;
+    const path = `rituals/${user.uid}`;
+    try {
+      const ritualRef = doc(db, 'rituals', user.uid);
+      await setDoc(ritualRef, { ...updates, updatedAt: new Date().toISOString() }, { merge: true });
     } catch (err) {
-    } finally {
-      setIsAuthLoading(false);
+      handleFirestoreError(err, OperationType.WRITE, path);
     }
   };
 
@@ -131,21 +285,14 @@ export default function App() {
     setIsLoading(true);
     setError(null);
     try {
-      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setUser(data.user);
-        setStep('home');
+      if (authMode === 'login') {
+        await signInWithEmailAndPassword(auth, email, password);
       } else {
-        setError(data.error || 'Authentication failed');
+        await createUserWithEmailAndPassword(auth, email, password);
       }
-    } catch (err) {
-      setError('Connection error. Please try again.');
+      setStep('home');
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
     } finally {
       setIsLoading(false);
     }
@@ -153,10 +300,10 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await signOut(auth);
       setUser(null);
       setStep('auth');
-      setUsername('');
+      setEmail('');
       setPassword('');
     } catch (err) {
       console.error('Logout failed', err);
@@ -170,6 +317,7 @@ export default function App() {
     try {
       const result = await processBrainDump(rawText);
       setProcessedTasks(result || '');
+      await saveRitual({ rawText, processedTasks: result || '' });
       setStep('process');
     } catch (err) {
       setError('Something went wrong. Let\'s try again, darling.');
@@ -188,9 +336,9 @@ export default function App() {
       setTodayPlan(result || '');
       
       // Parse tasks for checklist
+      let items: ChecklistItem[] = [];
       if (result) {
         const lines = result.split('\n');
-        const items: ChecklistItem[] = [];
         lines.forEach((line, index) => {
           const trimmed = line.trim();
           if (trimmed && (trimmed.includes('→') || trimmed.includes('-'))) {
@@ -204,6 +352,14 @@ export default function App() {
         setChecklist(items);
       }
       
+      await saveRitual({ 
+        todayPlan: result || '', 
+        checklist: items,
+        availableTime,
+        energyLevel,
+        startTime,
+        endTime
+      });
       setStep('plan');
     } catch (err) {
       setError('Failed to create your dream schedule. Try once more.');
@@ -213,19 +369,27 @@ export default function App() {
     }
   };
 
-  const reset = () => {
+  const reset = async () => {
     setStep('dump');
     setRawText('');
     setProcessedTasks('');
     setTodayPlan('');
     setChecklist([]);
     setError(null);
+    await saveRitual({
+      rawText: '',
+      processedTasks: '',
+      todayPlan: '',
+      checklist: []
+    });
   };
 
-  const toggleTask = (id: string) => {
-    setChecklist(prev => prev.map(item => 
+  const toggleTask = async (id: string) => {
+    const newChecklist = checklist.map(item => 
       item.id === id ? { ...item, completed: !item.completed } : item
-    ));
+    );
+    setChecklist(newChecklist);
+    await saveRitual({ checklist: newChecklist });
   };
 
   if (isAuthLoading) {
@@ -278,15 +442,15 @@ export default function App() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
-                    <UserIcon className="w-3 h-3" /> Username
+                    <UserIcon className="w-3 h-3" /> Email
                   </label>
                   <input
-                    type="text"
+                    type="email"
                     required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full p-4 bg-aesthetic-bg/50 border border-aesthetic-lavender rounded-2xl focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 transition-all"
-                    placeholder="Enter your username"
+                    placeholder="Enter your email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -400,7 +564,7 @@ export default function App() {
                 <UserIcon className="w-5 h-5 text-aesthetic-lavender-deep" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-aesthetic-ink truncate">{user.username}</p>
+                <p className="text-sm font-medium text-aesthetic-ink truncate">{user.email?.split('@')[0]}</p>
                 <p className="text-[10px] text-aesthetic-ink/40 uppercase tracking-widest font-bold">Free Plan</p>
               </div>
             </div>
@@ -455,7 +619,7 @@ export default function App() {
                   className="space-y-10"
                 >
                   <motion.div variants={itemVariants} className="space-y-3">
-                    <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Welcome, {user.username}</h2>
+                    <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Welcome, {user.email?.split('@')[0]}</h2>
                     <p className="text-aesthetic-ink/60 text-lg font-light tracking-wide">
                       Your mindful journey continues. How shall we shape your day?
                     </p>
