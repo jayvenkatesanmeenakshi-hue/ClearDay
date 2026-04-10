@@ -430,14 +430,14 @@ function App() {
             className="space-y-10"
           >
             <motion.div variants={itemVariants} className="space-y-6">
-              <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 border border-aesthetic-lavender rounded-full backdrop-blur-sm">
+              <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/70 border border-aesthetic-lavender rounded-full backdrop-blur-sm">
                 <Sparkles className="text-aesthetic-lavender-deep w-4 h-4" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-lavender-deep">Your Mindful Companion</span>
               </div>
               <h1 className="text-6xl lg:text-8xl font-display italic text-aesthetic-ink tracking-tight leading-[0.9]">
                 ClearDay
               </h1>
-              <p className="text-aesthetic-ink/60 text-xl lg:text-2xl font-light leading-relaxed max-w-md">
+              <p className="text-aesthetic-ink/80 text-xl lg:text-2xl font-light leading-relaxed max-w-md">
                 Transform chaotic thoughts into a structured journey. Find clarity in the ritual of planning.
               </p>
             </motion.div>
@@ -481,31 +481,31 @@ function App() {
             transition={{ duration: 1, delay: 0.5 }}
             className="hidden lg:block relative"
           >
-            <div className="absolute inset-0 bg-aesthetic-lavender/20 rounded-[3rem] rotate-3 blur-2xl" />
-            <div className="relative bg-white/40 backdrop-blur-md border border-white/50 rounded-[3rem] p-12 shadow-2xl space-y-8">
+            <div className="absolute inset-0 bg-aesthetic-lavender/40 rounded-[3rem] rotate-3 blur-2xl" />
+            <div className="relative bg-white/60 backdrop-blur-md border border-white/50 rounded-[3rem] p-12 shadow-2xl space-y-8">
               <div className="flex items-center gap-4">
                 <div className="w-3 h-3 rounded-full bg-red-300" />
                 <div className="w-3 h-3 rounded-full bg-yellow-300" />
                 <div className="w-3 h-3 rounded-full bg-green-300" />
               </div>
               <div className="space-y-4">
-                <div className="h-4 w-3/4 bg-aesthetic-lavender/30 rounded-full" />
-                <div className="h-4 w-1/2 bg-aesthetic-lavender/20 rounded-full" />
-                <div className="h-32 w-full bg-white/50 rounded-3xl border border-aesthetic-lavender/30 p-6">
+                <div className="h-4 w-3/4 bg-aesthetic-lavender/50 rounded-full" />
+                <div className="h-4 w-1/2 bg-aesthetic-lavender/40 rounded-full" />
+                <div className="h-32 w-full bg-white/70 rounded-3xl border border-aesthetic-lavender/30 p-6">
                   <div className="space-y-3">
-                    <div className="h-2 w-full bg-aesthetic-lavender-deep/10 rounded-full" />
-                    <div className="h-2 w-5/6 bg-aesthetic-lavender-deep/10 rounded-full" />
-                    <div className="h-2 w-4/6 bg-aesthetic-lavender-deep/10 rounded-full" />
+                    <div className="h-2 w-full bg-aesthetic-lavender-deep/20 rounded-full" />
+                    <div className="h-2 w-5/6 bg-aesthetic-lavender-deep/20 rounded-full" />
+                    <div className="h-2 w-4/6 bg-aesthetic-lavender-deep/20 rounded-full" />
                   </div>
                 </div>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex -space-x-2">
                   {[1,2,3].map(i => (
-                    <div key={i} className="w-8 h-8 rounded-full bg-aesthetic-lavender/40 border-2 border-white" />
+                    <div key={i} className="w-8 h-8 rounded-full bg-aesthetic-lavender/60 border-2 border-white" />
                   ))}
                 </div>
-                <div className="h-8 w-24 bg-aesthetic-lavender-deep/20 rounded-full" />
+                <div className="h-8 w-24 bg-aesthetic-lavender-deep/40 rounded-full" />
               </div>
             </div>
             
@@ -525,7 +525,7 @@ function App() {
           </motion.div>
         </main>
 
-        <footer className="absolute bottom-8 text-aesthetic-ink/30 text-[10px] font-bold uppercase tracking-[0.3em]">
+        <footer className="absolute bottom-8 text-aesthetic-ink/50 text-[10px] font-bold uppercase tracking-[0.3em]">
           © 2026 ClearDay • Mindful Productivity
         </footer>
       </div>
@@ -557,7 +557,7 @@ function App() {
             <h1 className="text-xl font-display italic text-aesthetic-ink tracking-tight">ClearDay</h1>
           </div>
 
-          <nav className="flex-1 space-y-2">
+                  <nav className="flex-1 space-y-2">
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -565,11 +565,11 @@ function App() {
                 className={cn(
                   "w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all text-left font-serif italic text-lg",
                   step === item.id 
-                    ? "bg-aesthetic-lavender/20 text-aesthetic-lavender-deep shadow-sm" 
-                    : "text-aesthetic-ink/40 hover:bg-aesthetic-bg hover:text-aesthetic-ink/60"
+                    ? "bg-aesthetic-lavender/40 text-aesthetic-lavender-deep shadow-sm" 
+                    : "text-aesthetic-ink/60 hover:bg-aesthetic-bg hover:text-aesthetic-ink/80"
                 )}
               >
-                <item.icon className={cn("w-5 h-5", step === item.id ? "text-aesthetic-lavender-deep" : "text-aesthetic-ink/30")} />
+                <item.icon className={cn("w-5 h-5", step === item.id ? "text-aesthetic-lavender-deep" : "text-aesthetic-ink/50")} />
                 {item.label}
               </button>
             ))}
@@ -577,17 +577,17 @@ function App() {
 
           <div className="mt-auto pt-8 border-t border-aesthetic-lavender space-y-4">
             <div className="flex items-center gap-3 px-4">
-              <div className="w-10 h-10 bg-aesthetic-accent/10 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-aesthetic-accent/20 rounded-full flex items-center justify-center">
                 <UserIcon className="w-5 h-5 text-aesthetic-lavender-deep" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-aesthetic-ink truncate">{user.displayName || user.email?.split('@')[0]}</p>
-                <p className="text-[10px] text-aesthetic-ink/40 uppercase tracking-widest font-bold">Free Plan</p>
+                <p className="text-[10px] text-aesthetic-ink/60 uppercase tracking-widest font-bold">Free Plan</p>
               </div>
             </div>
             <button 
               onClick={handleLogout}
-              className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-aesthetic-ink/40 hover:bg-red-50 hover:text-red-500 transition-all font-serif italic text-lg"
+              className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-aesthetic-ink/60 hover:bg-red-50 hover:text-red-500 transition-all font-serif italic text-lg"
             >
               <LogOut className="w-5 h-5" />
               Logout
@@ -637,7 +637,7 @@ function App() {
                 >
                   <motion.div variants={itemVariants} className="space-y-3">
                     <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Welcome, {user.displayName || user.email?.split('@')[0]}</h2>
-                    <p className="text-aesthetic-ink/60 text-lg font-light tracking-wide">
+                    <p className="text-aesthetic-ink/80 text-lg font-light tracking-wide">
                       Your mindful journey continues. How shall we shape your day?
                     </p>
                   </motion.div>
@@ -654,7 +654,7 @@ function App() {
                       </div>
                       <div>
                         <h3 className="text-xl font-serif italic text-aesthetic-ink">Mindful Release</h3>
-                        <p className="text-sm text-aesthetic-ink/40">Empty your mind and find clarity.</p>
+                        <p className="text-sm text-aesthetic-ink/60">Empty your mind and find clarity.</p>
                       </div>
                     </motion.button>
 
@@ -669,7 +669,7 @@ function App() {
                       </div>
                       <div>
                         <h3 className="text-xl font-serif italic text-aesthetic-ink">Execution Mode</h3>
-                        <p className="text-sm text-aesthetic-ink/40">
+                        <p className="text-sm text-aesthetic-ink/60">
                           {checklist.length > 0 
                             ? `${checklist.filter(c => c.completed).length}/${checklist.length} tasks completed`
                             : "No active ritual. Start one today."}
@@ -692,7 +692,7 @@ function App() {
                           View Full Plan
                         </button>
                       </div>
-                      <div className="p-6 bg-aesthetic-bg/50 rounded-3xl border border-aesthetic-lavender/50 italic text-aesthetic-ink/60 line-clamp-3">
+                      <div className="p-6 bg-aesthetic-bg/50 rounded-3xl border border-aesthetic-lavender/50 italic text-aesthetic-ink/80 line-clamp-3">
                         {todayPlan}
                       </div>
                     </motion.div>
@@ -711,7 +711,7 @@ function App() {
                 >
                   <motion.div variants={itemVariants} className="space-y-3">
                     <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Mindful Release</h2>
-                    <p className="text-aesthetic-ink/60 text-lg font-light tracking-wide">
+                    <p className="text-aesthetic-ink/80 text-lg font-light tracking-wide">
                       Let it all out. Every thought, every task, every dream.
                     </p>
                   </motion.div>
@@ -721,7 +721,7 @@ function App() {
                       value={rawText}
                       onChange={(e) => setRawText(e.target.value)}
                       placeholder="What's on your heart today? List it all here..."
-                      className="relative w-full h-96 p-10 bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 resize-none font-sans text-xl leading-relaxed placeholder:text-aesthetic-ink/30"
+                      className="relative w-full h-96 p-10 bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm focus:outline-none focus:ring-2 focus:ring-aesthetic-lavender/50 resize-none font-sans text-xl leading-relaxed placeholder:text-aesthetic-ink/50"
                     />
                   </motion.div>
                   <motion.button
@@ -749,18 +749,18 @@ function App() {
                 >
                   <motion.div variants={itemVariants} className="space-y-3">
                     <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Journey Structure</h2>
-                    <p className="text-aesthetic-ink/60 text-lg font-light">A beautiful structure for your day.</p>
+                    <p className="text-aesthetic-ink/80 text-lg font-light">A beautiful structure for your day.</p>
                   </motion.div>
 
                   {!processedTasks ? (
                     <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] p-20 text-center space-y-6">
                       <div className="w-20 h-20 bg-aesthetic-bg rounded-full flex items-center justify-center mx-auto">
-                        <Flower2 className="w-10 h-10 text-aesthetic-lavender-deep opacity-30" />
+                        <Flower2 className="w-10 h-10 text-aesthetic-lavender-deep opacity-50" />
                       </div>
-                      <p className="text-aesthetic-ink/40 font-serif italic text-xl">Start with a Mindful Release to see your journey here.</p>
+                      <p className="text-aesthetic-ink/60 font-serif italic text-xl">Start with a Mindful Release to see your journey here.</p>
                       <button 
                         onClick={() => setStep('dump')}
-                        className="px-8 py-4 bg-aesthetic-lavender/20 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/40 transition-all"
+                        className="px-8 py-4 bg-aesthetic-lavender/40 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/60 transition-all"
                       >
                         Go to Mindful Release
                       </button>
@@ -768,7 +768,7 @@ function App() {
                   ) : (
                     <>
                       <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] shadow-sm p-12 markdown-body font-sans relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                        <div className="absolute top-0 right-0 p-8 opacity-20">
                           <Heart className="w-16 h-16 text-aesthetic-lavender-deep" />
                         </div>
                         <Markdown>{processedTasks}</Markdown>
@@ -782,7 +782,7 @@ function App() {
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
                           <div className="space-y-4">
-                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/60 flex items-center gap-2">
                               <Clock className="w-3 h-3" /> Time for You
                             </label>
                             <input
@@ -793,7 +793,7 @@ function App() {
                             />
                           </div>
                           <div className="space-y-4">
-                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/60 flex items-center gap-2">
                               <Zap className="w-3 h-3" /> Energy Flow
                             </label>
                             <div className="flex gap-2 p-1.5 bg-aesthetic-bg/50 rounded-2xl border border-aesthetic-lavender">
@@ -805,7 +805,7 @@ function App() {
                                     "flex-1 py-3 text-xs font-medium rounded-xl transition-all",
                                     energyLevel === level 
                                       ? "bg-white text-aesthetic-lavender-deep shadow-sm" 
-                                      : "text-aesthetic-ink/40 hover:text-aesthetic-ink/60"
+                                      : "text-aesthetic-ink/60 hover:text-aesthetic-ink/80"
                                   )}
                                 >
                                   {level}
@@ -814,7 +814,7 @@ function App() {
                             </div>
                           </div>
                           <div className="space-y-4">
-                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/60 flex items-center gap-2">
                               <Sun className="w-3 h-3" /> Start Time
                             </label>
                             <div className="flex gap-3">
@@ -827,14 +827,14 @@ function App() {
                               <button
                                 type="button"
                                 onClick={() => toggleAmPm(startTime, setStartTime)}
-                                className="px-6 bg-aesthetic-lavender/20 border border-aesthetic-lavender rounded-2xl text-[10px] font-bold text-aesthetic-lavender-deep hover:bg-aesthetic-lavender/40 transition-all"
+                                className="px-6 bg-aesthetic-lavender/40 border border-aesthetic-lavender rounded-2xl text-[10px] font-bold text-aesthetic-lavender-deep hover:bg-aesthetic-lavender/60 transition-all"
                               >
                                 {getAmPm(startTime)}
                               </button>
                             </div>
                           </div>
                           <div className="space-y-4">
-                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/40 flex items-center gap-2">
+                            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-aesthetic-ink/60 flex items-center gap-2">
                               <Moon className="w-3 h-3" /> End Time
                             </label>
                             <div className="flex gap-3">
@@ -847,7 +847,7 @@ function App() {
                               <button
                                 type="button"
                                 onClick={() => toggleAmPm(endTime, setEndTime)}
-                                className="px-6 bg-aesthetic-lavender/20 border border-aesthetic-lavender rounded-2xl text-[10px] font-bold text-aesthetic-lavender-deep hover:bg-aesthetic-lavender/40 transition-all"
+                                className="px-6 bg-aesthetic-lavender/40 border border-aesthetic-lavender rounded-2xl text-[10px] font-bold text-aesthetic-lavender-deep hover:bg-aesthetic-lavender/60 transition-all"
                               >
                                 {getAmPm(endTime)}
                               </button>
@@ -881,18 +881,18 @@ function App() {
                 >
                   <motion.div variants={itemVariants} className="space-y-3">
                     <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Daily Ritual</h2>
-                    <p className="text-aesthetic-ink/60 text-lg font-light">Gentle reminders for a peaceful day.</p>
+                    <p className="text-aesthetic-ink/80 text-lg font-light">Gentle reminders for a peaceful day.</p>
                   </motion.div>
 
                   {!todayPlan ? (
                     <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] p-20 text-center space-y-6">
                       <div className="w-20 h-20 bg-aesthetic-bg rounded-full flex items-center justify-center mx-auto">
-                        <Calendar className="w-10 h-10 text-aesthetic-lavender-deep opacity-30" />
+                        <Calendar className="w-10 h-10 text-aesthetic-lavender-deep opacity-50" />
                       </div>
-                      <p className="text-aesthetic-ink/40 font-serif italic text-xl">Configure your vibe in Journey Structure to see your ritual here.</p>
+                      <p className="text-aesthetic-ink/60 font-serif italic text-xl">Configure your vibe in Journey Structure to see your ritual here.</p>
                       <button 
                         onClick={() => setStep('process')}
-                        className="px-8 py-4 bg-aesthetic-lavender/20 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/40 transition-all"
+                        className="px-8 py-4 bg-aesthetic-lavender/40 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/60 transition-all"
                       >
                         Go to Journey Structure
                       </button>
@@ -940,7 +940,7 @@ function App() {
                 >
                   <motion.div variants={itemVariants} className="space-y-3">
                     <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Execution Mode</h2>
-                    <p className="text-aesthetic-ink/60 text-lg font-light">Tick off your tasks as you complete them.</p>
+                    <p className="text-aesthetic-ink/80 text-lg font-light">Tick off your tasks as you complete them.</p>
                   </motion.div>
 
                   {checklist.length > 0 ? (
@@ -970,7 +970,7 @@ function App() {
                             </div>
                             <span className={cn(
                               "text-xl font-serif italic transition-all",
-                              item.completed ? "line-through text-aesthetic-ink/40" : "text-aesthetic-ink"
+                              item.completed ? "line-through text-aesthetic-ink/60" : "text-aesthetic-ink"
                             )}>
                               {item.text}
                             </span>
@@ -1000,12 +1000,12 @@ function App() {
                   ) : (
                     <motion.div variants={itemVariants} className="bg-white border border-aesthetic-lavender rounded-[2.5rem] p-20 text-center space-y-6">
                       <div className="w-20 h-20 bg-aesthetic-bg rounded-full flex items-center justify-center mx-auto">
-                        <CheckCircle2 className="w-10 h-10 text-aesthetic-lavender-deep opacity-30" />
+                        <CheckCircle2 className="w-10 h-10 text-aesthetic-lavender-deep opacity-50" />
                       </div>
-                      <p className="text-aesthetic-ink/40 font-serif italic text-xl">Create a Daily Ritual first to start executing.</p>
+                      <p className="text-aesthetic-ink/60 font-serif italic text-xl">Create a Daily Ritual first to start executing.</p>
                       <button 
                         onClick={() => setStep('plan')}
-                        className="px-8 py-4 bg-aesthetic-lavender/20 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/40 transition-all"
+                        className="px-8 py-4 bg-aesthetic-lavender/40 text-aesthetic-lavender-deep rounded-full font-medium hover:bg-aesthetic-lavender/60 transition-all"
                       >
                         Go to Daily Ritual
                       </button>
@@ -1028,11 +1028,11 @@ function App() {
           </div>
         </main>
 
-        <footer className="h-20 flex items-center justify-center gap-8 text-aesthetic-lavender-deep/30 relative z-10">
+        <footer className="h-20 flex items-center justify-center gap-8 text-aesthetic-lavender-deep/50 relative z-10">
           <Moon className="w-4 h-4" />
           <Sun className="w-4 h-4" />
           <Coffee className="w-4 h-4" />
-          <p className="text-[10px] text-aesthetic-ink/30 uppercase tracking-[0.4em] font-bold">
+          <p className="text-[10px] text-aesthetic-ink/50 uppercase tracking-[0.4em] font-bold">
             ClearDay Rituals
           </p>
         </footer>
