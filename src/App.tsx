@@ -227,21 +227,30 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const testConnection = async () => {
-      // Small delay to allow Firestore to initialize its connection
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    const testConnection = async (retries = 3) => {
       try {
+        // Small initial delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Using getDocFromServer to force a network check
         await getDocFromServer(doc(db, 'test', 'connection'));
         console.log("Firebase connection successful.");
       } catch (error) {
-        console.error("Firebase connection test error:", error);
         // If it's a permission error, the connection is actually working
         if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('Permission denied'))) {
           console.log("Firebase connection successful (Permission Denied is expected for test doc).");
           return;
         }
+
+        if (retries > 0) {
+          console.log(`Firebase connection attempt failed, retrying... (${retries} left)`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          return testConnection(retries - 1);
+        }
+
+        console.error("Firebase connection test error:", error);
         if (error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration. The client is offline. Enabling long polling might help.");
+          console.error("Firebase is still reporting offline. This may be due to network restrictions or incorrect configuration.");
         }
       }
     };

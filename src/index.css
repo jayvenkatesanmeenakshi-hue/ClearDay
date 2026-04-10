@@ -11,6 +11,8 @@
   --color-aesthetic-lavender-deep: #8E74AD;
   --color-aesthetic-ink: #2A2438;
   --color-aesthetic-accent: #96ADCF;
+
+  --background-image-aesthetic-gradient: linear-gradient(135deg, #D1C4E0 0%, #E8E5EE 50%, #96ADCF 100%);
 }
 
 body {
