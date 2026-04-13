@@ -30,6 +30,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { processBrainDump, generateTodayPlan } from './services/gemini';
 import { auth, db } from './firebase';
+import { syncEcosystemUser } from './services/ecosystemService';
 import { 
   onAuthStateChanged, 
   signOut,
@@ -218,6 +219,7 @@ function App() {
       setUser(currentUser);
       if (currentUser) {
         setStep('home');
+        syncEcosystemUser(currentUser, 'ClearDay');
       } else {
         setStep('auth');
       }
@@ -237,7 +239,11 @@ function App() {
         console.log("Firebase connection successful.");
       } catch (error) {
         // If it's a permission error, the connection is actually working
-        if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('Permission denied'))) {
+        if (error instanceof Error && (
+          error.message.includes('permission-denied') || 
+          error.message.includes('Permission denied') ||
+          (error as any).code === 'permission-denied'
+        )) {
           console.log("Firebase connection successful (Permission Denied is expected for test doc).");
           return;
         }

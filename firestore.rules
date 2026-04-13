@@ -20,6 +20,11 @@
 // Fields:
 //   - role: string (admin, user)
 //   - email: string
+//   - uid: string
+//   - displayName: string
+//   - photoURL: string
+//   - lastLogin: timestamp
+//   - appsUsed: list
 //
 // ===============================================================
 
@@ -66,14 +71,25 @@ service cloud.firestore {
       data.updatedAt is timestamp && isRecent(data.updatedAt);
     }
 
+    function isValidUser(data) {
+      return data.keys().hasAny(['email']) &&
+      (!('role' in data) || data.role in ['admin', 'user']) &&
+      (!('email' in data) || data.email is string) &&
+      (!('uid' in data) || data.uid == request.auth.uid) &&
+      (!('displayName' in data) || data.displayName is string || data.displayName == null) &&
+      (!('photoURL' in data) || data.photoURL is string || data.photoURL == null) &&
+      (!('lastLogin' in data) || data.lastLogin is timestamp) &&
+      (!('appsUsed' in data) || data.appsUsed is list);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.role == 'user';
-      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isAdmin() || (isOwner(userId) && isValidUser(request.resource.data));
     }
 
     match /rituals/{userId} {
