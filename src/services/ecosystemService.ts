@@ -1,11 +1,11 @@
 import { db } from '../firebase'; 
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocFromServer, serverTimestamp } from 'firebase/firestore';
 
 export const syncEcosystemUser = async (user: any, appName: string) => {
   if (!user) return;
   const docRef = doc(db, 'users', user.uid);
   try {
-    const docSnap = await getDoc(docRef);
+    const docSnap = await getDocFromServer(docRef).catch(() => getDoc(docRef));
     const existingData = docSnap.exists() ? docSnap.data() : null;
     const appsUsed = existingData?.appsUsed || [];
     if (!appsUsed.includes(appName)) {
