@@ -37,7 +37,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, onSnapshot, getDocFromServer } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, getDocFromServer, serverTimestamp } from 'firebase/firestore';
 
 enum OperationType {
   CREATE = 'create',
@@ -286,7 +286,7 @@ function App() {
     const path = `rituals/${user.uid}`;
     try {
       const ritualRef = doc(db, 'rituals', user.uid);
-      await setDoc(ritualRef, { ...updates, updatedAt: new Date().toISOString() }, { merge: true });
+      await setDoc(ritualRef, { ...updates, updatedAt: serverTimestamp() }, { merge: true });
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, path);
     }
