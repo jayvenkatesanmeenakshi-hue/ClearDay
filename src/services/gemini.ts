@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export const processBrainDump = async (rawText: string) => {
-  const model = "gemini-3.1-pro-preview";
+  const model = "gemini-2.0-flash";
   const systemInstruction = `You are ClearDay, a structured execution engine. Your purpose is to convert chaotic brain dumps into categorized tasks, realistic priorities, and actionable breakdowns.
 The tone is calm, clear, structured, and practical. No fluff. No hype.
 
@@ -69,7 +69,7 @@ export const generateTodayPlan = async (
   energyLevel: "Low" | "Medium" | "High",
   workHours?: string
 ) => {
-  const model = "gemini-3.1-pro-preview";
+  const model = "gemini-2.0-flash";
   const systemInstruction = `You are ClearDay, a structured execution engine. Create a realistic today plan.
 
 Planning Rules:

@@ -236,7 +236,6 @@ function App() {
         
         // Using getDocFromServer to force a network check
         await getDocFromServer(doc(db, 'test', 'connection'));
-        console.log("Firebase connection successful.");
       } catch (error) {
         // If it's a permission error, the connection is actually working
         if (error instanceof Error && (
@@ -244,12 +243,10 @@ function App() {
           error.message.includes('Permission denied') ||
           (error as any).code === 'permission-denied'
         )) {
-          console.log("Firebase connection successful (Permission Denied is expected for test doc).");
           return;
         }
 
         if (retries > 0) {
-          console.log(`Firebase connection attempt failed, retrying... (${retries} left)`);
           await new Promise(resolve => setTimeout(resolve, 3000));
           return testConnection(retries - 1);
         }
@@ -1008,7 +1005,7 @@ function App() {
                           onClick={() => window.print()}
                           className="flex-1 py-6 bg-aesthetic-lavender-deep text-white rounded-full font-medium flex items-center justify-center gap-3 hover:bg-aesthetic-lavender-deep/90 transition-all shadow-lg shadow-aesthetic-lavender-deep/20 text-lg"
                         >
-                          Save Ritual
+                          Export Ritual
                         </motion.button>
                       </motion.div>
                     </>
