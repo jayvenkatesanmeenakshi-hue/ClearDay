@@ -1047,6 +1047,14 @@ function App() {
           <p className="text-[10px] text-aesthetic-ink/50 uppercase tracking-[0.4em] font-bold">
             ClearDay Rituals
           </p>
+          <a 
+            href="/favicon-generator.html" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-[10px] text-aesthetic-lavender-deep/30 hover:text-aesthetic-lavender-deep transition-colors uppercase tracking-widest font-bold"
+          >
+            Favicon PNG
+          </a>
         </footer>
       </div>
     </div>

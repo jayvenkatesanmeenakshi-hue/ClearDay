@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClearDay Favicon Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100-vh;
+            background-color: #F9F8FF;
+            color: #2D2D2D;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 40px;
+            box-shadow: 0 10px 30px rgba(188, 168, 209, 0.2);
+            text-align: center;
+            max-width: 400px;
+        }
+        h1 { font-style: italic; color: #BCB8D1; margin-bottom: 10px; }
+        p { color: #666; margin-bottom: 30px; line-height: 1.5; }
+        canvas {
+            border: 1px solid #EEE;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 12px;
+        }
+        button {
+            background: #BCB8D1;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover { background: #A8A3C4; transform: translateY(-2px); }
+        .back-link {
+            margin-top: 20px;
+            text-decoration: none;
+            color: #BCB8D1;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ClearDay</h1>
+        <p>Your custom high-resolution favicon is ready.</p>
+        <canvas id="faviconCanvas" width="512" height="512"></canvas>
+        <br>
+        <button onclick="downloadPNG()">Download PNG (512x512)</button>
+        <br>
+        <a href="/" class="back-link">Back to ClearDay</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('faviconCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const svgString = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='#BCB8D1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/><path d='M5 3v4'/><path d='M19 17v4'/><path d='M3 5h4'/><path d='M17 19h4'/></svg>`;
+        
+        const img = new Image();
+        const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, 512, 512);
+            URL.revokeObjectURL(url);
+        };
+        img.src = url;
+
+        function downloadPNG() {
+            const link = document.createElement('a');
+            link.download = 'clearday-favicon.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>
