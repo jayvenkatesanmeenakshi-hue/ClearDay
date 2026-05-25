@@ -5,42 +5,45 @@
       "description": "User's daily ritual data including brain dump, processed tasks, and schedule.",
       "type": "object",
       "properties": {
-        "rawText": {
-          "type": "string",
-          "description": "The raw brain dump text."
-        },
-        "processedTasks": {
-          "type": "string",
-          "description": "The AI-processed and categorized tasks."
-        },
-        "todayPlan": {
-          "type": "string",
-          "description": "The generated daily schedule."
-        },
-        "checklist": {
-          "type": "array",
-          "description": "List of tasks for execution mode."
-        },
-        "availableTime": {
-          "type": "string",
-          "description": "User's available time for the day."
-        },
-        "energyLevel": {
-          "type": "string",
-          "description": "User's energy level."
-        },
-        "startTime": {
-          "type": "string",
-          "description": "Daily start time."
-        },
-        "endTime": {
-          "type": "string",
-          "description": "Daily end time."
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Last update timestamp."
+        "rawText": { "type": "string" },
+        "processedTasks": { "type": "string" },
+        "todayPlan": { "type": "string" },
+        "checklist": { "type": "array" },
+        "availableTime": { "type": "string" },
+        "energyLevel": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "User": {
+      "title": "Ecosystem User",
+      "description": "Global user profile shared across StarVortex apps.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "lastLogin": { "type": "string", "format": "date-time" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "appsUsed": { "type": "array" },
+        "xp": { "type": "number", "default": 0 },
+        "level": { "type": "number", "default": 1 },
+        "discipline": { "type": "number", "default": 0 },
+        "streak": { "type": "number", "default": 0 }
+      }
+    },
+    "Activity": {
+      "title": "Ecosystem Activity",
+      "description": "A significant action logged to the global stream.",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "description": "Format: [APP_NAME]: [DESCRIPTION]" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { 
+          "type": "object",
+          "description": "Information for GrindOS XP/Skill calculations."
         }
       }
     }
@@ -49,6 +52,14 @@
     "/rituals/{userId}": {
       "schema": "Ritual",
       "description": "Collection of user rituals, keyed by user ID."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Shared ecosystem user profiles."
+    },
+    "/users/{userId}/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Global activity stream for XP and record-keeping."
     }
   }
 }

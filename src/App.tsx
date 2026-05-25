@@ -30,7 +30,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { processBrainDump, generateTodayPlan } from './services/gemini';
 import { auth, db } from './firebase';
-import { syncEcosystemUser } from './services/ecosystemService';
+import { syncEcosystemUser, broadcastActivity, getGlobalProfile } from './services/ecosystemService';
 import { 
   onAuthStateChanged, 
   signOut,
@@ -190,6 +190,7 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [globalProfile, setGlobalProfile] = useState<any>(null);
   const [rawText, setRawText] = useState('');
   const [processedTasks, setProcessedTasks] = useState('');
   const [todayPlan, setTodayPlan] = useState('');
@@ -219,7 +220,8 @@ function App() {
       setUser(currentUser);
       if (currentUser) {
         setStep('home');
-        syncEcosystemUser(currentUser, 'ClearDay');
+        syncEcosystemUser(currentUser, 'CLEARDAY'); 
+        getGlobalProfile(currentUser.uid).then(setGlobalProfile);
       } else {
         setStep('auth');
       }
@@ -327,6 +329,9 @@ function App() {
       const result = await processBrainDump(rawText);
       setProcessedTasks(result || '');
       await saveRitual({ rawText, processedTasks: result || '' });
+      await broadcastActivity(user.uid, 'Processed Brain Dump', {
+        tasks_identified: result?.split('\n').length || 0
+      });
       setStep('process');
     } catch (err) {
       setError('Something went wrong. Let\'s try again, darling.');
@@ -341,7 +346,12 @@ function App() {
     setError(null);
     try {
       const workHours = `${startTime} - ${endTime}`;
-      const result = await generateTodayPlan(processedTasks, availableTime, energyLevel, workHours);
+      const result = await generateTodayPlan(processedTasks, availableTime, energyLevel, workHours, {
+        xp: globalProfile?.xp || 0,
+        level: globalProfile?.level || 1,
+        discipline: globalProfile?.discipline || 0,
+        streak: globalProfile?.streak || 0
+      });
       setTodayPlan(result || '');
       
       // Parse tasks for checklist
@@ -369,6 +379,11 @@ function App() {
         startTime,
         endTime
       });
+      await broadcastActivity(user.uid, 'Generated Daily Plan', {
+        energy_level: energyLevel,
+        available_time: availableTime,
+        task_count: items.length
+      });
       setStep('plan');
     } catch (err) {
       setError('Failed to create your dream schedule. Try once more.');
@@ -394,11 +409,21 @@ function App() {
   };
 
   const toggleTask = async (id: string) => {
+    const item = checklist.find(i => i.id === id);
     const newChecklist = checklist.map(item => 
       item.id === id ? { ...item, completed: !item.completed } : item
     );
     setChecklist(newChecklist);
     await saveRitual({ checklist: newChecklist });
+    
+    if (item && !item.completed) {
+      await broadcastActivity(user.uid, 'Completed Task', {
+        task_text: item.text,
+        total_tasks: newChecklist.length,
+        completed_tasks: newChecklist.filter(i => i.completed).length,
+        energy_level: energyLevel
+      });
+    }
   };
 
   if (isAuthLoading) {
@@ -594,7 +619,17 @@ function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-aesthetic-ink truncate">{user.displayName || user.email?.split('@')[0]}</p>
-                <p className="text-[10px] text-aesthetic-ink/60 uppercase tracking-widest font-bold">Free Plan</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-[10px] text-aesthetic-ink/60 uppercase tracking-widest font-bold">
+                    {globalProfile?.level ? `Level ${globalProfile.level}` : 'ClearDay'}
+                  </p>
+                  {globalProfile?.streak > 0 && (
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded text-[8px] font-bold">
+                      <Zap className="w-2 h-2" />
+                      {globalProfile.streak}d
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <button 
@@ -648,7 +683,15 @@ function App() {
                   className="space-y-10"
                 >
                   <motion.div variants={itemVariants} className="space-y-3">
-                    <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Welcome, {user.displayName || user.email?.split('@')[0]}</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-4xl font-serif italic text-aesthetic-lavender-deep">Welcome, {user.displayName || user.email?.split('@')[0]}</h2>
+                      {globalProfile?.discipline > 0 && (
+                        <div className="flex items-center gap-2 px-4 py-1.5 bg-aesthetic-lavender/20 border border-aesthetic-lavender/50 rounded-full backdrop-blur-sm">
+                          <Lock className="w-3 h-3 text-aesthetic-lavender-deep" />
+                          <span className="text-[10px] font-bold text-aesthetic-lavender-deep uppercase tracking-[0.2em]">Discipline Rank: {globalProfile.discipline}</span>
+                        </div>
+                      )}
+                    </div>
                     <p className="text-aesthetic-ink/80 text-lg font-light tracking-wide">
                       Your mindful journey continues. How shall we shape your day?
                     </p>
@@ -1047,14 +1090,6 @@ function App() {
           <p className="text-[10px] text-aesthetic-ink/50 uppercase tracking-[0.4em] font-bold">
             ClearDay Rituals
           </p>
-          <a 
-            href="/favicon-generator.html" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-[10px] text-aesthetic-lavender-deep/30 hover:text-aesthetic-lavender-deep transition-colors uppercase tracking-widest font-bold"
-          >
-            Favicon PNG
-          </a>
         </footer>
       </div>
     </div>

@@ -67,10 +67,13 @@ export const generateTodayPlan = async (
   tasks: string,
   availableTime: string,
   energyLevel: "Low" | "Medium" | "High",
-  workHours?: string
+  workHours?: string,
+  ecosystemContext?: { xp: number; level: number; discipline: number; streak: number }
 ) => {
   const model = "gemini-2.0-flash";
   const systemInstruction = `You are ClearDay, a structured execution engine. Create a realistic today plan.
+${ecosystemContext ? `User context: Level ${ecosystemContext.level}, Discipline ${ecosystemContext.discipline}, Streak ${ecosystemContext.streak}. ` : ""}
+${ecosystemContext && ecosystemContext.discipline > 5 ? "User has HIGH DISCIPLINE. Keep intervals tight and focus deep." : "User is building discipline. Keep breaks generous and transition clear."}
 
 Planning Rules:
 1. Anti-Overwhelm: Max 3 major tasks, Max 5 small tasks.
@@ -98,6 +101,7 @@ ${tasks}
 Available time: ${availableTime}
 Energy level: ${energyLevel}
 ${workHours ? `Work hours: ${workHours}` : ""}
+${ecosystemContext ? `User Ecosystem Stats: Level ${ecosystemContext.level}, Streak ${ecosystemContext.streak}` : ""}
 
 Generate the plan.`;
 
